@@ -1,2 +1,4 @@
+# Cargo and custom Rust compilation
 **/target
 **/Cargo.lock
+**/bin
