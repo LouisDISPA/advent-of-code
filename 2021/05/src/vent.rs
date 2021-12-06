@@ -8,20 +8,14 @@ pub struct Vent {
     pub end: Position,
 }
 
+
 impl FromStr for Vent {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut positions = s.split("->").map(str::trim).map(str::parse);
-
-        let start = match positions.next() {
-            Some(v) => v?,
-            None => return Err(format!("Start position missing for vent: {}", s)),
-        };
-        let end = match positions.next() {
-            Some(v) => v?,
-            None => return Err(format!("End position missing for vent: {}", s)),
-        };
+        let (start, end) =  s.split_once("->").ok_or(format!("Missing '->' for parsing position: '{}'", s))?;
+        let start = start.trim().parse()?;
+        let end = end.trim().parse()?;
         Ok(Self { start, end })
     }
 }
