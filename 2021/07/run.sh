@@ -1,0 +1,1 @@
+clippy-driver solution.rs -o bin && ./bin $@
