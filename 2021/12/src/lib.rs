@@ -3,23 +3,23 @@ mod tests;
 
 use std::collections::HashMap;
 
-type Input = HashMap<String, Vec<String>>;
+type Input<'a> = HashMap<&'a str, Vec<&'a str>>;
 
-pub fn add_connection_to_node(graph: &mut Input, a: &str, b: &str) {
+pub fn add_connection_to_node<'a>(graph: &mut Input<'a>, a: &'a str, b: &'a str) {
     if let Some(node_a) = graph.get_mut(a) {
-        if !node_a.iter().any(|conn| conn == b) {
-            node_a.push(b.to_owned());
+        if !node_a.iter().any(|conn| conn == &b) {
+            node_a.push(b);
         }
     } else {
-        graph.insert(a.to_owned(), vec![b.to_owned()]);
+        graph.insert(a, vec![b]);
     }
 
     if let Some(node_b) = graph.get_mut(b) {
-        if !node_b.iter().any(|conn| conn == a) {
-            node_b.push(a.to_owned());
+        if !node_b.iter().any(|conn| conn == &a) {
+            node_b.push(a);
         }
     } else {
-        graph.insert(b.to_owned(), vec![a.to_owned()]);
+        graph.insert(b, vec![a]);
     }
 }
 
@@ -71,7 +71,7 @@ pub fn find_the_end2<'a>(
     }
     let mut sum = 0;
     for node in graph.get(node).unwrap() {
-        if node != "start" {
+        if node != &"start" {
             if &node.to_uppercase() == node {
                 path.push(node);
                 sum += find_the_end2(graph, node, path, twice);

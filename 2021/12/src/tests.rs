@@ -28,5 +28,5 @@ fn part_2_example() {
 fn part_2_input() {
     let input = parse_input(INPUT);
     let result = solve_part2(input);
-    assert_eq!(result, 19258);
+    assert_eq!(result, 114189);
 }
