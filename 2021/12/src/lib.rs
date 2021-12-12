@@ -5,29 +5,11 @@ use std::collections::HashMap;
 
 type Input<'a> = HashMap<&'a str, Vec<&'a str>>;
 
-pub fn add_connection_to_node<'a>(graph: &mut Input<'a>, a: &'a str, b: &'a str) {
-    if let Some(node_a) = graph.get_mut(a) {
-        if !node_a.iter().any(|conn| conn == &b) {
-            node_a.push(b);
-        }
-    } else {
-        graph.insert(a, vec![b]);
-    }
-
-    if let Some(node_b) = graph.get_mut(b) {
-        if !node_b.iter().any(|conn| conn == &a) {
-            node_b.push(a);
-        }
-    } else {
-        graph.insert(b, vec![a]);
-    }
-}
-
 pub fn parse_input(text: &str) -> Input {
     let mut graph = HashMap::new();
     for line in text.lines() {
         if let Some((a, b)) = line.split_once('-') {
-            add_connection_to_node(&mut graph, a, b);
+            add_connection(&mut graph, a, b);
         }
     }
     graph
@@ -51,7 +33,10 @@ pub fn find_the_end<'a>(graph: &'a Input, node: &'a str, path: &mut Vec<&'a str>
     path.push(node);
     let mut sum = 0;
     for node in graph.get(node).unwrap() {
-        if &node.to_uppercase() == node || !path.iter().any(|path_node| path_node == node) {
+        let exist_in_path = path.iter().any(|path_node| path_node == node);
+        let is_big = &node.to_uppercase() == node;
+
+        if is_big || !exist_in_path {
             sum += find_the_end(graph, node, path);
         }
     }
@@ -72,7 +57,9 @@ pub fn find_the_end2<'a>(
     let mut sum = 0;
     for node in graph.get(node).unwrap() {
         if node != &"start" {
-            if &node.to_uppercase() == node {
+            let is_big = &node.to_uppercase() == node;
+
+            if is_big {
                 path.push(node);
                 sum += find_the_end2(graph, node, path, twice);
                 path.pop();
@@ -91,4 +78,22 @@ pub fn find_the_end2<'a>(
         }
     }
     sum
+}
+
+pub fn add_connection<'a>(graph: &mut Input<'a>, a: &'a str, b: &'a str) {
+    if let Some(node_a) = graph.get_mut(a) {
+        if !node_a.iter().any(|conn| conn == &b) {
+            node_a.push(b);
+        }
+    } else {
+        graph.insert(a, vec![b]);
+    }
+
+    if let Some(node_b) = graph.get_mut(b) {
+        if !node_b.iter().any(|conn| conn == &a) {
+            node_b.push(a);
+        }
+    } else {
+        graph.insert(b, vec![a]);
+    }
 }
