@@ -1,0 +1,4 @@
+[package]
+name = "aoc_2021_20"
+version = "1.0.0"
+edition = "2021"
