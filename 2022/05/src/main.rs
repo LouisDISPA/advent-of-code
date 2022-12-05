@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::str::FromStr;
 
 const EXAMPLE: &str = include_str!("../example.txt");
 const INPUT: &str = include_str!("../input.txt");
@@ -14,52 +14,42 @@ fn main() {
     println!("  input: {}", output);
 
     println!("Part 2:");
-    let output = solve2(example.0, &example.1);
+    let output = solve2(&example.0, &example.1);
     println!("  example: {}", output);
-    let output = solve2(input.0, &input.1);
+    let output = solve2(&input.0, &input.1);
     println!("  input: {}", output);
 }
 
-fn solve1(crates: &HashMap<usize, Vec<char>>, movements: &[Movement]) -> String {
-    let mut crates = crates.clone();
+fn solve1(crates: &[Vec<char>], movements: &[Movement]) -> String {
+    let mut crates = crates.to_owned();
     let mut buffer = Vec::new();
     for movement in movements {
-        let from_crate = crates.entry(movement.from).or_default();
+        let from_crate = &mut crates[movement.from];
         for _ in 0..movement.count {
-            buffer.push(from_crate.pop().unwrap());
+            buffer.push(from_crate.swap_remove(from_crate.len() - 1));
         }
-        let to_crate = crates.entry(movement.to).or_default();
+        let to_crate = &mut crates[movement.to];
         for c in buffer.drain(..) {
             to_crate.push(c);
         }
     }
-    let mut vec: Vec<(usize, char)> = crates
-        .into_iter()
-        .map(|(i, c)| (i, *c.last().unwrap()))
-        .collect();
-    vec.sort_by_key(|(i, _)| *i);
-    vec.into_iter().map(|(_, c)| c).collect()
+    crates.into_iter().flat_map(|v| v.last().copied()).collect()
 }
 
-fn solve2(crates: HashMap<usize, Vec<char>>, movements: &[Movement]) -> String {
-    let mut crates = crates.clone();
+fn solve2(crates: &[Vec<char>], movements: &[Movement]) -> String {
+    let mut crates = crates.to_owned();
     let mut buffer = Vec::new();
     for movement in movements {
-        let from_crate = crates.entry(movement.from).or_default();
+        let from_crate = &mut crates[movement.from];
         for _ in 0..movement.count {
-            buffer.push(from_crate.pop().unwrap());
+            buffer.push(from_crate.swap_remove(from_crate.len() - 1));
         }
-        let to_crate = crates.entry(movement.to).or_default();
+        let to_crate = &mut crates[movement.to];
         for c in buffer.drain(..).rev() {
             to_crate.push(c);
         }
     }
-    let mut vec: Vec<(usize, char)> = crates
-        .into_iter()
-        .map(|(i, c)| (i, *c.last().unwrap()))
-        .collect();
-    vec.sort_by_key(|(i, _)| *i);
-    vec.into_iter().map(|(_, c)| c).collect()
+    crates.into_iter().flat_map(|v| v.last().copied()).collect()
 }
 
 #[derive(Debug)]
@@ -77,24 +67,26 @@ impl FromStr for Movement {
         let count = count[5..].trim().parse().unwrap();
 
         let (from, to) = movement.split_once("to").unwrap();
-        let from = from.trim().parse().unwrap();
-        let to = to.trim().parse().unwrap();
+        let from = from.trim().parse::<usize>().unwrap() - 1;
+        let to = to.trim().parse::<usize>().unwrap() - 1;
 
         Ok(Self { count, from, to })
     }
 }
 
-fn parse(input: &str) -> (HashMap<usize, Vec<char>>, Vec<Movement>) {
+fn parse(input: &str) -> (Vec<Vec<char>>, Vec<Movement>) {
     let (crates, movements) = input.split_once("\n\n").unwrap();
     let crates = crates
         .lines()
         .rev()
         .skip(1)
-        .fold(HashMap::new(), |mut acc, line| {
+        .fold(Vec::new(), |mut acc, line| {
             for (i, letter) in line.chars().skip(1).step_by(4).enumerate() {
                 if letter != ' ' {
-                    let entry = acc.entry(i + 1).or_insert_with(Vec::new);
-                    entry.push(letter);
+                    if acc.len() <= i {
+                        acc.resize(i + 1, Vec::new());
+                    }
+                    acc[i].push(letter);
                 }
             }
             acc
