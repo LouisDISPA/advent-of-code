@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{mem, str::FromStr};
 
 const EXAMPLE: &str = include_str!("../example.txt");
 const INPUT: &str = include_str!("../input.txt");
@@ -22,33 +22,28 @@ fn main() {
 
 fn solve1(crates: &[Vec<char>], movements: &[Movement]) -> String {
     let mut crates = crates.to_owned();
-    let mut buffer = Vec::new();
     for movement in movements {
-        let from_crate = &mut crates[movement.from];
+        let mut from = mem::take(&mut crates[movement.from]);
+        let to = &mut crates[movement.to];
         for _ in 0..movement.count {
-            buffer.push(from_crate.swap_remove(from_crate.len() - 1));
+            to.push(from.pop().unwrap());
         }
-        let to_crate = &mut crates[movement.to];
-        for c in buffer.drain(..) {
-            to_crate.push(c);
-        }
+        crates[movement.from] = from;
     }
+
     crates.into_iter().flat_map(|v| v.last().copied()).collect()
 }
 
 fn solve2(crates: &[Vec<char>], movements: &[Movement]) -> String {
     let mut crates = crates.to_owned();
-    let mut buffer = Vec::new();
     for movement in movements {
-        let from_crate = &mut crates[movement.from];
-        for _ in 0..movement.count {
-            buffer.push(from_crate.swap_remove(from_crate.len() - 1));
-        }
-        let to_crate = &mut crates[movement.to];
-        for c in buffer.drain(..).rev() {
-            to_crate.push(c);
-        }
+        let mut from = mem::take(&mut crates[movement.from]);
+        let to = &mut crates[movement.to];
+        let start = from.len() - movement.count;
+        to.append(&mut from.drain(start..).collect());
+        crates[movement.from] = from;
     }
+
     crates.into_iter().flat_map(|v| v.last().copied()).collect()
 }
 
