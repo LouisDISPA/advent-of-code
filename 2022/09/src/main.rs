@@ -49,17 +49,6 @@ fn solve1(input: &str) -> usize {
         }
     }
 
-    // for y in (0..=5).rev() {
-    //     for x in 0..=6 {
-    //         if visited.contains(&(x, y)) {
-    //             print!("#");
-    //         } else {
-    //             print!(".");
-    //         }
-    //     }
-    //     println!();
-    // }
-
     visited.len()
 }
 
@@ -68,67 +57,33 @@ fn solve2(input: &str) -> usize {
     let mut tail = [(0_isize, 0_isize); 10];
     visited.insert((0, 0));
 
-    for line in input.lines().flat_map(str::parse::<Move>) {
-        for _ in 0..line.count {
+    for movement in input.lines().flat_map(str::parse::<Move>) {
+        for _ in 0..movement.count {
+            let head = &mut tail[0];
             // Update the head
-            match line.direction {
-                Direction::Up => tail[0].1 += 1,
-                Direction::Down => tail[0].1 -= 1,
-                Direction::Left => tail[0].0 -= 1,
-                Direction::Right => tail[0].0 += 1,
+            match movement.direction {
+                Direction::Up => head.1 += 1,
+                Direction::Down => head.1 -= 1,
+                Direction::Left => head.0 -= 1,
+                Direction::Right => head.0 += 1,
             }
 
             // Update the tail if it's to far from the head
             for i in 1..10 {
-                if (tail[i - 1].0 - tail[i].0).abs() > 1 {
-                    tail[i].0 = tail[i].0 + (tail[i - 1].0 - tail[i].0).signum();
-                    if (tail[i - 1].1 - tail[i].1).abs() >= 1 {
-                        tail[i].1 = tail[i].1 + (tail[i - 1].1 - tail[i].1).signum();
-                    }
-                } else if (tail[i - 1].1 - tail[i].1).abs() > 1 {
-                    tail[i].1 = tail[i].1 + (tail[i - 1].1 - tail[i].1).signum();
-                    if (tail[i - 1].0 - tail[i].0).abs() >= 1 {
-                        tail[i].0 = tail[i].0 + (tail[i - 1].0 - tail[i].0).signum();
-                    }
+                let previous = tail[i - 1];
+                let current = &mut tail[i];
+
+                let delta_x = previous.0 - current.0;
+                let delta_y = previous.1 - current.1;
+
+                if delta_x.abs() > 1 || delta_y.abs() > 1 {
+                    current.0 += delta_x.signum();
+                    current.1 += delta_y.signum();
                 }
             }
-
-            // println!("== {:?} ==\n", line);
-            // for y in (0..=5).rev() {
-            //     for x in 0..=6 {
-            //         let mut printed = false;
-            //         for i in 0..10 {
-            //             if x == tail[i].0 && y == tail[i].1 {
-            //                 print!("{}", i);
-            //                 printed = true;
-            //                 break;
-            //             }
-            //         }
-            //         if !printed {
-            //             print!(".");
-            //         }
-            //     }
-            //     println!();
-            // }
-            // println!();
-
             visited.insert(tail[9]);
         }
     }
-
-    // for y in (-10..=10).rev() {
-    //     for x in -13..=15 {
-    //         if x == 0 && y == 0 {
-    //             print!("s");
-    //         } else if visited.contains(&(x, y)) {
-    //             print!("#");
-    //         } else {
-    //             print!(".");
-    //         }
-    //     }
-    //     println!();
-    // }
-
     visited.len()
 }
 
