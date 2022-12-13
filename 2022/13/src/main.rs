@@ -1,4 +1,6 @@
-use std::{fmt::Display, str::FromStr};
+use std::{cmp::Ordering, fmt::Display, str::FromStr};
+
+use serde::Deserialize;
 
 const EXAMPLE: &str = include_str!("../example.txt");
 const INPUT: &str = include_str!("../input.txt");
@@ -24,86 +26,22 @@ fn solve1(input: &str) -> usize {
         .map(|pair| pair.parse::<Pair>().unwrap())
         .enumerate()
     {
-        // println!("\n== Pair {} ==", id);
-        // println!("{:?}", compare(pair.0, pair.1));
-
-        if compare(pair.0, pair.1).unwrap() {
+        if pair.0 < pair.1 {
             total += id + 1;
         }
     }
     total
 }
 
-fn compare(left: Signal, right: Signal) -> Option<bool> {
-    // if matches!((&left, &right), (Signal::Signal(_), Signal::Signal(_))) {
-    //     println!("- compare {} vs {}", left, right);
-    // }
-
-    match (left, right) {
-        (Signal::Value(left), Signal::Value(right)) => {
-            // println!("- compare {} vs {}", left, right);
-            if left == right {
-                None
-            } else {
-                Some(left < right)
-            }
-        }
-        (Signal::Signal(left), Signal::Signal(right)) => {
-            let result = if left.len() == right.len() {
-                None
-            } else {
-                Some(left.len() < right.len())
-            };
-
-            for (left, right) in left.into_iter().zip(right.into_iter()) {
-                if let Some(result) = compare(left, right) {
-                    return Some(result);
-                }
-            }
-            result
-        }
-        (left, right) => {
-            let left = if matches!(left, Signal::Signal(_)) {
-                left
-            } else {
-                Signal::Signal(vec![left])
-            };
-            let right = if matches!(right, Signal::Signal(_)) {
-                right
-            } else {
-                Signal::Signal(vec![right])
-            };
-            compare(left, right)
-        }
-    }
-}
-
 fn solve2(input: &str) -> usize {
-    let mut signals: Vec<Signal> = vec![];
+    let mut signals: Vec<Signal> = input.lines().flat_map(serde_json::from_str).collect();
+    signals.sort();
 
-    for signal in input
-        .lines()
-        .filter(|line| !line.is_empty())
-        .flat_map(str::parse::<Signal>)
-    {
-        let index = signals
-            .iter()
-            .position(|signal2| compare(signal.clone(), signal2.clone()).unwrap())
-            .unwrap_or_else(|| signals.len());
-        signals.insert(index, signal);
-    }
+    let signal_0 = Signal::List(vec![Signal::List(vec![Signal::Value(2)])]);
+    let signal_1 = Signal::List(vec![Signal::List(vec![Signal::Value(6)])]);
 
-    let signal_0 = Signal::Signal(vec![Signal::Signal(vec![Signal::Value(2)])]);
-    let signal_1 = Signal::Signal(vec![Signal::Signal(vec![Signal::Value(6)])]);
-
-    let mut index_0 = signals
-        .iter()
-        .position(|signal| compare(signal_0.clone(), signal.clone()).unwrap())
-        .unwrap_or_else(|| signals.len());
-    let mut index_1 = signals
-        .iter()
-        .position(|signal| compare(signal_1.clone(), signal.clone()).unwrap())
-        .unwrap_or_else(|| signals.len());
+    let (Ok(mut index_0) | Err(mut index_0)) = signals.binary_search(&signal_0);
+    let (Ok(mut index_1) | Err(mut index_1)) = signals.binary_search(&signal_1);
 
     if index_0 < index_1 {
         index_1 += 1;
@@ -112,6 +50,59 @@ fn solve2(input: &str) -> usize {
     }
 
     (index_0 + 1) * (index_1 + 1)
+}
+
+impl Eq for Signal {}
+
+impl PartialEq for Signal {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Signal::Value(left), Signal::Value(right)) => left == right,
+            (Signal::List(left), Signal::List(right)) => left == right,
+            (left, Signal::List(right)) => Some(left) == right.first() && right.len() == 1,
+            (Signal::List(left), right) => left.first() == Some(right) && left.len() == 1,
+        }
+    }
+}
+
+impl Ord for Signal {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+
+impl PartialOrd for Signal {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        // println!("-compare- {} {}", self, other);
+        match (self, other) {
+            (Signal::Value(left), Signal::Value(right)) => PartialOrd::partial_cmp(left, right),
+            (Signal::List(left), Signal::List(right)) => {
+                for (left, right) in left.iter().zip(right.iter()) {
+                    let result = PartialOrd::partial_cmp(left, right).unwrap();
+                    if result != Ordering::Equal {
+                        return Some(result);
+                    }
+                }
+                PartialOrd::partial_cmp(&left.len(), &right.len())
+            }
+            (left, Signal::List(right)) => {
+                if let Some(right) = right.first() {
+                    if left != right {
+                        return PartialOrd::partial_cmp(left, right);
+                    }
+                }
+                PartialOrd::partial_cmp(&1, &right.len())
+            }
+            (Signal::List(left), right) => {
+                if let Some(left) = left.first() {
+                    if left != right {
+                        return PartialOrd::partial_cmp(left, right);
+                    }
+                }
+                PartialOrd::partial_cmp(&left.len(), &1)
+            }
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -128,10 +119,11 @@ impl FromStr for Pair {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
 enum Signal {
     Value(usize),
-    Signal(Vec<Signal>),
+    List(Vec<Signal>),
 }
 
 impl FromStr for Signal {
@@ -164,7 +156,7 @@ impl FromStr for Signal {
             signals.push(signal);
         }
 
-        Ok(Signal::Signal(signals))
+        Ok(Signal::List(signals))
     }
 }
 
@@ -172,7 +164,7 @@ impl Display for Signal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Signal::Value(value) => write!(f, "{}", value),
-            Signal::Signal(signals) => {
+            Signal::List(signals) => {
                 write!(f, "[")?;
                 for (i, signal) in signals.iter().enumerate() {
                     if i > 0 {
