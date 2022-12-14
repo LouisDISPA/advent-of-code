@@ -26,6 +26,7 @@ fn solve1(input: &str) -> usize {
         .map(|pair| pair.parse::<Pair>().unwrap())
         .enumerate()
     {
+        // println!("{}\n{}\n", pair.0, pair.1);
         if pair.0 < pair.1 {
             total += id + 1;
         }
@@ -130,34 +131,31 @@ impl FromStr for Signal {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let Ok(value) = s.parse::<usize>() {
-            return Ok(Signal::Value(value));
-        }
-        let s = &s[1..s.len() - 1];
-        let mut signals = vec![];
+        let mut temp = vec![];
+        for slice in s.split(',') {
+            let count = slice.find(|c| c != '[').unwrap();
+            temp.resize(temp.len() + count, Vec::new());
 
-        let mut depth = 0;
-        let mut start = 0;
-        for (end, c) in s.chars().enumerate() {
-            if c == '[' {
-                depth += 1;
-            } else if c == ']' {
-                depth -= 1;
-            } else if c == ',' && depth == 0 {
-                let signal = s[start..end].parse::<Signal>().unwrap();
-                signals.push(signal);
-                start = end + 1;
-                continue;
+            if let Ok(number) = slice.trim_matches(is_bracket).parse::<usize>() {
+                let last = temp.last_mut().unwrap();
+                last.push(Signal::Value(number));
+            }
+
+            let count = slice.len() - slice.rfind(|c| c != ']').unwrap() - 1;
+            for _ in 0..count {
+                let signals = temp.pop().unwrap();
+                match temp.last_mut() {
+                    Some(last) => last.push(Signal::List(signals)),
+                    None => return Ok(Signal::List(signals)),
+                }
             }
         }
-
-        if start < s.len() {
-            let signal = s[start..].parse::<Signal>().unwrap();
-            signals.push(signal);
-        }
-
-        Ok(Signal::List(signals))
+        Err(())
     }
+}
+
+fn is_bracket(c: char) -> bool {
+    c == '[' || c == ']'
 }
 
 impl Display for Signal {
